@@ -139,13 +139,19 @@ baby_df =
 
 fit a model
 
-```{r}
-model_fit = lm(bwt ~ gaweeks, data = baby_df)
-```
+I will use stepwise to choose a model, it is choosing a model by AIC in a stepwise algorithm.
 
 ```{r}
-baby_df %>% 
-  modelr::add_residuals(model_fit) %>% 
-  ggplot(aes(x = gaweeks, y = resid)) + 
-  geom_point()
+model1 = 
+  lm(bwt ~ ., data = baby_df) %>% 
+  step(trace = 0)
+
+summary(model1)
+
+model1 = 
+  baby_df %>% 
+  select(bwt)
 ```
+
+
+
