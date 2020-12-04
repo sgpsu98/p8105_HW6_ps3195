@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(viridis)
+library(purrr)
 knitr::opts_chunk$set(
 	echo = TRUE,
 	warning = FALSE,
@@ -109,7 +110,31 @@ Find some residuals
 
 ```{r}
 baby_df = 
-  read_csv("./data/birthweight.csv")
+  read_csv("./data/birthweight.csv") %>% 
+  janitor::clean_names() %>% 
+  drop_na() %>% 
+  mutate(
+    across(
+      c("frace", "mrace"),
+      ~ case_when(
+        .x == 1 ~ "White",
+        .x == 2 ~ "Black",
+        .x == 3 ~ "Asian",
+        .x == 4 ~ "Puero Rican",
+        .x == 8 ~ "Other",
+        .x == 9 ~ "Unknown"
+      )
+    ),
+    babysex = case_when(
+      babysex == 1 ~ "White",
+      babysex == 2 ~ "Black"
+    ) %>% as.factor(),
+    malfrom = case_when(
+      malform == 0 ~ "absent",
+      malform == 1 ~ "present"
+    ) %>% as.factor(),
+    across(where(is.character), as.factor)
+  )
 ```
 
 fit a model

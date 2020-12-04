@@ -534,7 +534,31 @@ glm(resolution ~ victim_age + victim_race + victim_sex,
 <h2>Problem 2</h2>
 <p>Find some residuals</p>
 <pre class="r"><code>baby_df = 
-  read_csv(&quot;./data/birthweight.csv&quot;)</code></pre>
+  read_csv(&quot;./data/birthweight.csv&quot;) %&gt;% 
+  janitor::clean_names() %&gt;% 
+  drop_na() %&gt;% 
+  mutate(
+    across(
+      c(&quot;frace&quot;, &quot;mrace&quot;),
+      ~ case_when(
+        .x == 1 ~ &quot;White&quot;,
+        .x == 2 ~ &quot;Black&quot;,
+        .x == 3 ~ &quot;Asian&quot;,
+        .x == 4 ~ &quot;Puero Rican&quot;,
+        .x == 8 ~ &quot;Other&quot;,
+        .x == 9 ~ &quot;Unknown&quot;
+      )
+    ),
+    babysex = case_when(
+      babysex == 1 ~ &quot;White&quot;,
+      babysex == 2 ~ &quot;Black&quot;
+    ) %&gt;% as.factor(),
+    malfrom = case_when(
+      malform == 0 ~ &quot;absent&quot;,
+      malform == 1 ~ &quot;present&quot;
+    ) %&gt;% as.factor(),
+    across(where(is.character), as.factor)
+  )</code></pre>
 <pre><code>## 
 ## -- Column specification --------------------------------------------------------
 ## cols(
