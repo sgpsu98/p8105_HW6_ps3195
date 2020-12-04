@@ -29,6 +29,7 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 library(tidyverse)
 library(modelr)
 library(p8105.datasets)
+library(mgcv)
 ```
 
 ### Problem 1
@@ -106,7 +107,7 @@ models_results_df %>%
 
 ## Problem 2
 
-Find some residuals
+**import and tidy**
 
 ```{r}
 baby_df = 
@@ -137,21 +138,84 @@ baby_df =
   )
 ```
 
-fit a model
+**fit a model**
 
 I will use stepwise to choose a model, it is choosing a model by AIC in a stepwise algorithm.
 
-```{r}
+```{r stepwise}
 model1 = 
   lm(bwt ~ ., data = baby_df) %>% 
   step(trace = 0)
 
 summary(model1)
 
-model1 = 
-  baby_df %>% 
-  select(bwt)
 ```
+
+And the results suggest that the pick by stepwise is:
+
+bwt ~ babysex + bhead + blength + delwt + fincome + 
+    gaweeks + mheight + mrace + parity + ppwt + smoken
+    
+```{r set model}
+fit_model = 
+   lm(bwt ~ babysex + bhead + blength + delwt + fincome + 
+    gaweeks + mheight + mrace + parity + ppwt + smoken, data = baby_df)
+```
+
+```{r}
+baby_df %>% 
+  add_predictions(fit_model) %>% 
+  add_residuals(fit_model) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm",) +
+  labs(x = 'fitted values of birthweight', y = 'model residuals', title = 'Model residuals against fitted values')
+```
+
+The plot shows that there may be no linear relationship between fitted values and residuals of models since the lm-smooth line is extremely close to the x-axis. Also, center of model residuals' distribution is around 0.
+
+
+**Other Model**
+
+Model 1: bwt ~ blength + gaweeks
+
+Model 2: bwt ~ bhead + blength + babysex + bhead * blength + bhead * babysex + blength * babysex + bhead * blength * babysex
+
+
+**Cross validation:**
+
+```{r}
+set.seed(51)
+
+cv = 
+  modelr::crossv_mc(baby_df, 200, id = "id") %>% 
+  mutate(
+    model_main = map(.x = train, ~lm(bwt ~ babysex + bhead + blength + delwt + fincome + gaweeks + mheight + mrace + parity + ppwt + smoken, data = .x)),
+    model_1 =  map(.x = train,  ~ lm(bwt ~ blength + gaweeks, data = .x)),
+    model_2 = map(.x = train,  ~ lm(bwt ~ bhead + blength + babysex + bhead * blength + bhead * babysex + blength * babysex + bhead * blength * babysex, data = .x))
+  ) %>% 
+  mutate(
+    rmse_main = map2_dbl(.x = model_main, .y = test, ~rmse(.x, .y)),
+    rmse_1 = map2_dbl(.x = model_1, .y = test, ~rmse(.x, .y)),
+    rmse_2 = map2_dbl(.x = model_2, .y = test, ~rmse(.x, .y))
+  )
+
+cv %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin() +
+  labs(
+        title = "Cross Validation Comparisons",
+        x = "Models",
+        y = "RMSE")
+```
+
+It seems that my model has the lowest rmse among these three models, and the second model is better than the first model since it has lower rmse.
 
 
 
