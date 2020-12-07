@@ -136,6 +136,8 @@ baby_df =
     ) %>% as.factor(),
     across(where(is.character), as.factor)
   )
+
+skimr::skim(baby_df)
 ```
 
 **fit a model**
